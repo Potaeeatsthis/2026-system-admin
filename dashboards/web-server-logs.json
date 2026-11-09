@@ -1,0 +1,306 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_LOKI",
+      "label": "Loki",
+      "description": "Select your working Loki data source",
+      "type": "datasource",
+      "pluginId": "loki",
+      "pluginName": "Loki"
+    }
+  ],
+  "id": null,
+  "uid": null,
+  "title": "Web Server Logs",
+  "description": "Read NGINX and Linux logs by server and log type. Summary counts and traffic chart cover NGINX for the selected server and dashboard time range; Log type filters only the log viewer. No data means no matching entries, not proof that a server is healthy.",
+  "tags": [
+    "loki",
+    "alloy",
+    "nginx"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "refresh": "30s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "server",
+        "label": "Server",
+        "type": "query",
+        "datasource": {
+          "type": "loki",
+          "uid": "${DS_LOKI}"
+        },
+        "query": "label_values({job=~\"auth|kernel|nginx_access|nginx_error|syslog\"}, host)",
+        "refresh": 2,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".+",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": []
+      },
+      {
+        "name": "log_type",
+        "label": "Log type",
+        "type": "custom",
+        "query": "NGINX access : nginx_access,NGINX errors : nginx_error,Authentication : auth,Kernel : kernel,System : syslog",
+        "multi": false,
+        "includeAll": true,
+        "allValue": ".+",
+        "current": {
+          "text": "NGINX access",
+          "value": "nginx_access"
+        },
+        "options": [
+          {
+            "text": "NGINX access",
+            "value": "nginx_access",
+            "selected": true
+          },
+          {
+            "text": "NGINX errors",
+            "value": "nginx_error",
+            "selected": false
+          },
+          {
+            "text": "Authentication",
+            "value": "auth",
+            "selected": false
+          },
+          {
+            "text": "Kernel",
+            "value": "kernel",
+            "selected": false
+          },
+          {
+            "text": "System",
+            "value": "syslog",
+            "selected": false
+          }
+        ]
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 10,
+      "title": "Access log entries",
+      "type": "stat",
+      "description": "Count over the selected time range for the selected servers. Independent of the Log type filter. Error-log entries are not a count of failed HTTP requests. No data does not prove that collection is working.",
+      "datasource": {
+        "type": "loki",
+        "uid": "${DS_LOKI}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "editorMode": "code",
+          "queryType": "instant",
+          "expr": "sum(count_over_time({job=\"nginx_access\", host=~\"${server:regex}\"}[$__range]))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "No data",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      }
+    },
+    {
+      "id": 11,
+      "title": "Error log entries",
+      "type": "stat",
+      "description": "Count over the selected time range for the selected servers. Independent of the Log type filter. Error-log entries are not a count of failed HTTP requests. No data does not prove that collection is working.",
+      "datasource": {
+        "type": "loki",
+        "uid": "${DS_LOKI}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "editorMode": "code",
+          "queryType": "instant",
+          "expr": "sum(count_over_time({job=\"nginx_error\", host=~\"${server:regex}\"}[$__range]))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "No data",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "orange"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      }
+    },
+    {
+      "id": 1,
+      "title": "NGINX traffic by server",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 18,
+        "h": 8
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "${DS_LOKI}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "editorMode": "code",
+          "expr": "sum by (host) (rate({job=\"nginx_access\", host=~\"${server:regex}\"}[5m]))",
+          "queryType": "range",
+          "legendFormat": "{{host}}"
+        }
+      ],
+      "description": "Average access-log entries per second over five minutes. Each line is one selected server. This approximates request rate when each request produces one entry. Independent of the Log type filter.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisLabel": "Log entries / second"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Logs \u00b7 ${log_type:text}",
+      "type": "logs",
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 24,
+        "h": 18
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "${DS_LOKI}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "editorMode": "code",
+          "expr": "{job=~\"${log_type:regex}\", host=~\"${server:regex}\"}",
+          "queryType": "range",
+          "maxLines": 1000
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "prettifyLogMessage": false
+      },
+      "description": "Filtered by Server and Log type. Newest entries appear first; long lines wrap. Click a line to see its labels. Shows up to 1,000 entries: narrow the time range or filters to find older entries. Unknown log level means the severity was not identified."
+    }
+  ]
+}
