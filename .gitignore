@@ -19,3 +19,4 @@ docs/assignment-01.pdf
 *.swp
 *~
 .DS_Store
+/graphify-out/cost.json
